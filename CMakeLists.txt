@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(Python 3 COMPONENTS Interpreter Development.Module REQUIRED)
 
+set(pybind11_DIR "/usr/local/lib/python3.8/dist-packages/pybind11/share/cmake/pybind11")
 find_package(pybind11 CONFIG REQUIRED)
 
 # -------------------------- Includes ------------------------------------------
