@@ -1,13 +1,22 @@
+import sys
+original_dir = ("/workspace/benchmark/code/RangeFilteredANN/experiments")
+config_dir = ("/workspace/bsc_fanns/benchmark")
+
+sys.path.append(original_dir)
+sys.path.append(config_dir)
+
 import argparse
 import numpy as np
 import os
 import wrapper as wp
 import time
-import sys
 import multiprocessing
 # import tracemalloc
 import resource # only works on linux/mac
 import gc
+
+from config import config
+
 
 DATASET_FOLDER = "/data/parap/storage/jae/new_filtered_ann_datasets"
 # DATASET_FOLDER = "/ssd1/anndata/range_filters"
@@ -30,7 +39,7 @@ EXPERIMENT_FILTER_WIDTHS = [f"2pow{i}" for i in range(-16, 1)]
 
 TOP_K = 10
 BEAM_SIZES = [10, 20, 40, 80, 160, 320, 640, 1280]
-FINAL_MULTIPLIES = [1, 2, 3, 4, 8, 16, 32]
+FINAL_MULTIPLIES = [1]
 
 ALPHAS = [1]
 VAMANA_TREE_SPLIT_FACTORS = [2]
@@ -63,9 +72,9 @@ parser.add_argument(
 )
 parser.add_argument("--all_methods", action="store_true", help="Run all methods")
 parser.add_argument(
-    "--results_file_prefix",
-    help="Optional prefix to prepend to results files",
-    default="",
+    "--results_file_path",
+    type=str,
+    help="Path to store the results files",
 )
 parser.add_argument(
     "--beam_search_size",
@@ -208,26 +217,23 @@ def should_break(run_results):
 
 
 def initialize_dataset(dataset_name):
-    data = np.load(os.path.join(DATASET_FOLDER, f"{dataset_name}.npy"))
-    queries = np.load(os.path.join(DATASET_FOLDER, f"{dataset_name}_queries.npy"))
+    spath = os.path.join(config.DATASET[dataset_name]['path'], 'created/RFANN')
+    data = np.load(os.path.join(spath, 'base.npy'))
+    queries =  np.load(os.path.join(spath, 'query.npy'))
 
-    filter_values = np.load(
-        os.path.join(DATASET_FOLDER, f"{dataset_name}_filter-values.npy")
-    )
+    filter_values =  np.load(os.path.join(spath, 'label_base.npy'))
 
-    metric = "mips" if "angular" in dataset_name else "Euclidian"
+    metric = "Euclidian"
 
     return data, queries, filter_values, metric
 
 
 def get_queries_and_gt(dataset_name, filter_width):
-    filter_width = "_" if filter_width == "" else f"_{filter_width}_"
-    query_filter_ranges = np.load(
-        os.path.join(DATASET_FOLDER, f"{dataset_name}_queries{filter_width}ranges.npy")
-    )
-    query_gt = np.load(
-        os.path.join(DATASET_FOLDER, f"{dataset_name}_queries{filter_width}gt.npy")
-    )
+    spath = os.path.join(config.DATASET[dataset_name]['path'], 'created/RFANN')
+    query_filter_ranges = np.load(os.path.join(spath, 'label_query.npy'))
+
+    query_gt = np.load(os.path.join(spath, 'label_groundtruth.npy'))
+
 
     return query_filter_ranges, query_gt
 
@@ -245,6 +251,7 @@ def run_prefiltering_experiment(all_results, dataset_name, filter_width):
     query_filter_ranges, query_gt = get_queries_and_gt(dataset_name, filter_width)
 
     start = time.time()
+    print(queries.shape[0])
     query_params = wp.build_query_params(k=TOP_K, beam_size=0, verbose=VERBOSE)
     prefilter_results = prefilter_index.batch_search(
         queries, query_filter_ranges, queries.shape[0], query_params
@@ -536,15 +543,14 @@ def run_super_optimized_postfiltering_experiment(
 
 
 def save_results(all_results, dataset_name):
-    output_file = f"results/{args.results_file_prefix}{dataset_name}_results.csv"
+    output_file = args.results_file_path +  'results.csv'
 
     # only write header if file doesn't exist
     if not os.path.exists(output_file):
         with open(output_file, "a") as f:
             f.write("filter_width,method,recall,average_time,qps,threads\n")
 
-    num_queries = 10000 if "redcaps" not in dataset_name else 800
-
+    num_queries = config.DATASET[dataset_name]['qN']
     if not args.dont_write_to_results_file:
         with open(output_file, "a") as f:
             for tup in all_results:
