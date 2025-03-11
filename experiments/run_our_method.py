@@ -78,8 +78,9 @@ parser.add_argument(
 )
 parser.add_argument(
     "--beam_search_size",
-    type=int,
-    help=f"Optional beam size to use for experiments. Default of None corresponds to do all of {BEAM_SIZES}",
+    type=lambda s: [int(x) for x in s.split()],
+    nargs="+",
+    help=f"Optional beam sizes to use for experiments. Default of None corresponds to do all of {BEAM_SIZES}",
     default=None,
 )
 parser.add_argument(
@@ -140,7 +141,7 @@ if num_threads is None:
 os.environ["PARLAY_NUM_THREADS"] = str(num_threads)
 
 if args.beam_search_size is not None:
-    BEAM_SIZES = [args.beam_search_size]
+    BEAM_SIZES = args.beam_search_size
 if args.experiment_filter_width is not None:
     EXPERIMENT_FILTER_WIDTHS = [args.experiment_filter_width]
 if args.num_final_multiplies is not None:
