@@ -78,8 +78,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--beam_search_size",
-    type=lambda s: [int(x) for x in s.split()],
-    nargs="+",
+    type=lambda s: list(map(int, s.split())),
     help=f"Optional beam sizes to use for experiments. Default of None corresponds to do all of {BEAM_SIZES}",
     default=None,
 )
