@@ -78,7 +78,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--beam_search_size",
-    type=lambda s: list(map(int, s.split())),
+    type=lambda s: list(map(int, s.split(','))),  # Split on commas and convert to int
     help=f"Optional beam sizes to use for experiments. Default of None corresponds to do all of {BEAM_SIZES}",
     default=None,
 )
